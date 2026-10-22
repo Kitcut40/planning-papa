@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Planning Papa</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Papa">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#eef1f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f141b" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+/* Une colonne façon appli : sélecteur de date, grande carte du poste, frise des 10 jours suivants.
+   Polices système uniquement pour fonctionner sans réseau. */
+:root {
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --fg: #182230;
+  --muted: #5d6b7e;
+  --line: #d7dde6;
+  --matin: #b86e00;   --matin-bg: #fff3dc;
+  --am: #1f7fc4;      --am-bg: #e1f0fb;
+  --nuit: #4b3fb8;    --nuit-bg: #e7e4fb;
+  --repos: #2a8a5c;   --repos-bg: #dff3e8;
+  --display: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
+  --body: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f141b; --surface: #19212c; --fg: #e9eef5; --muted: #95a3b6; --line: #2a3442;
+    --matin: #ffb547; --matin-bg: #3a2a0d;
+    --am: #66b7ef;    --am-bg: #10293b;
+    --nuit: #a99cff;  --nuit-bg: #241f4a;
+    --repos: #5fd39a; --repos-bg: #12301f;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px;
+  padding-top: max(20px, env(safe-area-inset-top, 0px));
+  padding-bottom: max(32px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  -webkit-user-select: none; user-select: none;
+}
+[hidden] { display: none !important; }
+.wrap { max-width: 440px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+h1 { font-family: var(--display); font-size: 1.6rem; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+.sub { color: var(--muted); margin: 4px 0 0; font-size: 0.92rem; }
+
+.picker { display: flex; gap: 8px; align-items: stretch; }
+.picker button, .picker input {
+  font: inherit; font-size: 1.05rem; border: 1px solid var(--line); background: var(--surface); color: var(--fg);
+  border-radius: 12px; min-height: 52px;
+}
+.picker input { flex: 1; min-width: 0; padding: 0 12px; font-weight: 600; text-align: center; }
+.picker .nav { width: 52px; font-size: 1.5rem; cursor: pointer; }
+.today-btn {
+  font: inherit; font-weight: 600; border: 0; background: none; color: var(--am); cursor: pointer;
+  padding: 0; align-self: flex-start; font-size: 1rem;
+}
+button:focus-visible, input:focus-visible { outline: 3px solid var(--am); outline-offset: 2px; }
+
+.card {
+  border-radius: 22px; padding: 22px 22px 20px; background: var(--c-bg); color: var(--c);
+  display: flex; flex-direction: column; gap: 6px; transition: background .25s, color .25s;
+}
+.card .date { font-weight: 600; font-size: 1rem; color: var(--fg); opacity: .75; }
+.card .shift { font-family: var(--display); font-weight: 700; font-size: 2.8rem; line-height: 1.05; letter-spacing: -0.02em; }
+.card .detail { font-size: 1.05rem; color: var(--fg); font-weight: 500; }
+
+.s-matin { --c: var(--matin); --c-bg: var(--matin-bg); }
+.s-am    { --c: var(--am);    --c-bg: var(--am-bg); }
+.s-nuit  { --c: var(--nuit);  --c-bg: var(--nuit-bg); }
+.s-repos { --c: var(--repos); --c-bg: var(--repos-bg); }
+
+h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 6px 0 0; font-weight: 600; }
+.strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.day {
+  border-radius: 12px; padding: 8px 4px; text-align: center; background: var(--c-bg); color: var(--c);
+  display: flex; flex-direction: column; gap: 2px; border: 2px solid transparent; cursor: pointer; font: inherit;
+}
+.day .dw { font-size: 0.75rem; color: var(--fg); opacity: .7; }
+.day .dn { font-family: var(--display); font-weight: 700; font-size: 1.15rem; font-variant-numeric: tabular-nums; color: var(--fg); }
+.day .ds { font-size: 0.75rem; font-weight: 600; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 0.85rem; color: var(--muted); }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--c); margin-right: 6px; vertical-align: -1px; }
+@media (prefers-reduced-motion: reduce) { .card { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Planning de Papa</h1>
+    <p class="sub">2 matins, 2 après-midi, 2 nuits, 4 repos</p>
+  </header>
+
+  <div class="picker">
+    <button class="nav" id="prev" aria-label="Jour précédent">‹</button>
+    <input type="date" id="date" aria-label="Date">
+    <button class="nav" id="next" aria-label="Jour suivant">›</button>
+  </div>
+  <button class="today-btn" id="today">Revenir à aujourd'hui</button>
+
+  <section class="card s-am" id="card" aria-live="polite">
+    <div class="date" id="cDate"></div>
+    <div class="shift" id="cShift"></div>
+    <div class="detail" id="cDetail"></div>
+  </section>
+
+  <h2>Les 10 jours suivants</h2>
+  <div class="strip" id="strip"></div>
+
+  <div class="legend">
+    <span class="s-matin">Matin</span>
+    <span class="s-am">Après-midi</span>
+    <span class="s-nuit">Nuit</span>
+    <span class="s-repos">Repos</span>
+  </div>
+</div>
+
+<script>
+// Jour 0 du cycle = 1er matin, le lundi 19/10/2026
+const REF = Date.UTC(2026, 9, 19);
+const DAY = 86400000;
+const CYCLE = [
+  { k: "matin", label: "Matin",      n: "1er matin" },
+  { k: "matin", label: "Matin",      n: "2e matin" },
+  { k: "am",    label: "Après-midi", n: "1re après-midi" },
+  { k: "am",    label: "Après-midi", n: "2e après-midi" },
+  { k: "nuit",  label: "Nuit",       n: "1re nuit" },
+  { k: "nuit",  label: "Nuit",       n: "2e nuit" },
+  { k: "repos", label: "Repos",      n: "1er jour de repos" },
+  { k: "repos", label: "Repos",      n: "2e jour de repos" },
+  { k: "repos", label: "Repos",      n: "3e jour de repos" },
+  { k: "repos", label: "Repos",      n: "4e jour de repos" },
+];
+const JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+const JOURS_COURTS = ["dim", "lun", "mar", "mer", "jeu", "ven", "sam"];
+const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+
+function shiftFor(utc) {
+  const d = Math.round((utc - REF) / DAY);
+  return CYCLE[((d % 10) + 10) % 10];
+}
+function todayUTC() {
+  const n = new Date();
+  return Date.UTC(n.getFullYear(), n.getMonth(), n.getDate());
+}
+function toISO(utc) { return new Date(utc).toISOString().slice(0, 10); }
+function fromISO(s) {
+  const [y, m, d] = s.split("-").map(Number);
+  return Date.UTC(y, m - 1, d);
+}
+function fmtLong(utc) {
+  const d = new Date(utc);
+  const j = JOURS[d.getUTCDay()];
+  return j.charAt(0).toUpperCase() + j.slice(1) + " " + d.getUTCDate() + " " + MOIS[d.getUTCMonth()] + " " + d.getUTCFullYear();
+}
+
+const $ = (id) => document.getElementById(id);
+let current = todayUTC();
+
+function nextChange(utc) {
+  const s = shiftFor(utc);
+  for (let i = 1; i <= 10; i++) {
+    const t = shiftFor(utc + i * DAY);
+    if (s.k !== "repos" && t.k === "repos") return i === 1 ? "Repos demain" : "Repos dans " + i + " jours";
+    if (s.k === "repos" && t.k !== "repos") return i === 1 ? "Reprend demain (matin)" : "Reprend dans " + i + " jours";
+  }
+  return "";
+}
+
+function render() {
+  const s = shiftFor(current);
+  $("date").value = toISO(current);
+  $("card").className = "card s-" + s.k;
+  const isToday = current === todayUTC();
+  $("cDate").textContent = (isToday ? "Aujourd'hui · " : "") + fmtLong(current);
+  $("cShift").textContent = s.label;
+  $("cDetail").textContent = s.n + " · " + nextChange(current);
+  $("today").hidden = isToday;
+
+  const strip = $("strip");
+  strip.innerHTML = "";
+  for (let i = 1; i <= 10; i++) {
+    const u = current + i * DAY;
+    const t = shiftFor(u);
+    const d = new Date(u);
+    const b = document.createElement("button");
+    b.className = "day s-" + t.k;
+    b.innerHTML = '<span class="dw"></span><span class="dn"></span><span class="ds"></span>';
+    b.children[0].textContent = JOURS_COURTS[d.getUTCDay()];
+    b.children[1].textContent = d.getUTCDate();
+    b.children[2].textContent = t.k === "am" ? "Aprem" : t.label;
+    b.setAttribute("aria-label", fmtLong(u) + " : " + t.label);
+    b.addEventListener("click", () => { current = u; render(); window.scrollTo({ top: 0, behavior: "smooth" }); });
+    strip.appendChild(b);
+  }
+}
+
+$("date").addEventListener("change", (e) => { if (e.target.value) { current = fromISO(e.target.value); render(); } });
+$("prev").addEventListener("click", () => { current -= DAY; render(); });
+$("next").addEventListener("click", () => { current += DAY; render(); });
+$("today").addEventListener("click", () => { current = todayUTC(); render(); });
+// Revient sur aujourd'hui quand on rouvre l'appli un autre jour
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") { current = todayUTC(); render(); }
+});
+render();
+
+// Mise en cache pour fonctionner sans réseau
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+}
+</script>
+</body>
+</html>
