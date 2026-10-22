@@ -14,29 +14,30 @@
 <link rel="icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 <style>
-/* Une colonne façon appli : sélecteur de date, grande carte du poste, frise des 10 jours suivants.
-   Polices système uniquement pour fonctionner sans réseau. */
+/* Une colonne façon appli : date choisie + carte du poste, calendrier du mois en couleurs,
+   puis les week-ends de repos mois par mois. Polices système pour marcher sans réseau. */
 :root {
   --bg: #eef1f5;
   --surface: #ffffff;
   --fg: #182230;
   --muted: #5d6b7e;
   --line: #d7dde6;
-  --matin: #b86e00;   --matin-bg: #fff3dc;
-  --am: #1f7fc4;      --am-bg: #e1f0fb;
-  --nuit: #4b3fb8;    --nuit-bg: #e7e4fb;
-  --repos: #2a8a5c;   --repos-bg: #dff3e8;
+  --ring: #182230;
+  --matin: #b86e00;   --matin-bg: #ffe9c2;
+  --am: #1f7fc4;      --am-bg: #d3e9fa;
+  --nuit: #4b3fb8;    --nuit-bg: #e0dcfb;
+  --repos: #2a8a5c;   --repos-bg: #d2efdf;
   --display: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
   --body: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f141b; --surface: #19212c; --fg: #e9eef5; --muted: #95a3b6; --line: #2a3442;
-    --matin: #ffb547; --matin-bg: #3a2a0d;
-    --am: #66b7ef;    --am-bg: #10293b;
-    --nuit: #a99cff;  --nuit-bg: #241f4a;
-    --repos: #5fd39a; --repos-bg: #12301f;
+    --bg: #0f141b; --surface: #19212c; --fg: #e9eef5; --muted: #95a3b6; --line: #2a3442; --ring: #e9eef5;
+    --matin: #ffb547; --matin-bg: #3d2c0c;
+    --am: #66b7ef;    --am-bg: #112c40;
+    --nuit: #a99cff;  --nuit-bg: #27214f;
+    --repos: #5fd39a; --repos-bg: #133421;
     color-scheme: dark;
   }
 }
@@ -52,23 +53,29 @@ body {
   -webkit-user-select: none; user-select: none;
 }
 [hidden] { display: none !important; }
-.wrap { max-width: 440px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--am); outline-offset: 2px; }
+.wrap { max-width: 460px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
 h1 { font-family: var(--display); font-size: 1.6rem; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
 .sub { color: var(--muted); margin: 4px 0 0; font-size: 0.92rem; }
+h2 {
+  font-family: var(--display); font-size: 1.15rem; font-weight: 700; margin: 10px 0 0;
+}
 
+/* Sélecteur de date */
 .picker { display: flex; gap: 8px; align-items: stretch; }
 .picker button, .picker input {
-  font: inherit; font-size: 1.05rem; border: 1px solid var(--line); background: var(--surface); color: var(--fg);
+  font-size: 1.05rem; border: 1px solid var(--line); background: var(--surface); color: var(--fg);
   border-radius: 12px; min-height: 52px;
 }
-.picker input { flex: 1; min-width: 0; padding: 0 12px; font-weight: 600; text-align: center; }
+.picker input { font-family: inherit; flex: 1; min-width: 0; padding: 0 12px; font-weight: 600; text-align: center; }
 .picker .nav { width: 52px; font-size: 1.5rem; cursor: pointer; }
 .today-btn {
-  font: inherit; font-weight: 600; border: 0; background: none; color: var(--am); cursor: pointer;
+  font-weight: 600; border: 0; background: none; color: var(--am); cursor: pointer;
   padding: 0; align-self: flex-start; font-size: 1rem;
 }
-button:focus-visible, input:focus-visible { outline: 3px solid var(--am); outline-offset: 2px; }
 
+/* Carte du poste */
 .card {
   border-radius: 22px; padding: 22px 22px 20px; background: var(--c-bg); color: var(--c);
   display: flex; flex-direction: column; gap: 6px; transition: background .25s, color .25s;
@@ -82,18 +89,55 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--am); outlin
 .s-nuit  { --c: var(--nuit);  --c-bg: var(--nuit-bg); }
 .s-repos { --c: var(--repos); --c-bg: var(--repos-bg); }
 
-h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 6px 0 0; font-weight: 600; }
-.strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-.day {
-  border-radius: 12px; padding: 8px 4px; text-align: center; background: var(--c-bg); color: var(--c);
-  display: flex; flex-direction: column; gap: 2px; border: 2px solid transparent; cursor: pointer; font: inherit;
+/* Calendrier du mois */
+.panel { background: var(--surface); border-radius: 20px; padding: 14px 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+.mhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mhead .title { font-family: var(--display); font-weight: 700; font-size: 1.15rem; text-transform: capitalize; }
+.mhead button {
+  width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg);
+  font-size: 1.4rem; cursor: pointer;
 }
-.day .dw { font-size: 0.75rem; color: var(--fg); opacity: .7; }
-.day .dn { font-family: var(--display); font-weight: 700; font-size: 1.15rem; font-variant-numeric: tabular-nums; color: var(--fg); }
-.day .ds { font-size: 0.75rem; font-weight: 600; }
+.grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.wd { text-align: center; font-size: 0.75rem; font-weight: 600; color: var(--muted); padding-bottom: 2px; }
+.cell {
+  aspect-ratio: 1 / 1; max-width: 100%; border-radius: 10px; border: 0; cursor: pointer;
+  background: var(--c-bg); color: var(--fg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  position: relative; padding: 0;
+}
+.cell .n { font-weight: 700; font-size: 1.02rem; font-variant-numeric: tabular-nums; line-height: 1; }
+.cell .t { font-size: 0.6rem; font-weight: 700; color: var(--c); letter-spacing: 0.02em; line-height: 1; }
+.cell.today::after {
+  content: ""; position: absolute; inset: 0; border-radius: 10px; box-shadow: inset 0 0 0 2px var(--ring);
+}
+.cell.sel { box-shadow: 0 0 0 3px var(--c); }
+.cell.empty { background: none; cursor: default; }
 
-.legend { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 0.85rem; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 0.85rem; color: var(--muted); padding: 0 4px; }
 .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--c); margin-right: 6px; vertical-align: -1px; }
+.legend .today-key::before { background: none; box-shadow: inset 0 0 0 2px var(--ring); }
+
+/* Week-ends de repos */
+.we-list { display: flex; flex-direction: column; gap: 8px; }
+.we-month {
+  background: var(--surface); border-radius: 16px; padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.we-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.we-name { font-weight: 700; font-size: 1.02rem; text-transform: capitalize; }
+.we-count {
+  font-family: var(--display); font-weight: 700; font-size: 1.05rem; color: var(--repos);
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.we-count.zero { color: var(--muted); font-weight: 600; font-size: 0.95rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  border: 0; border-radius: 999px; padding: 6px 12px; cursor: pointer;
+  background: var(--repos-bg); color: var(--fg); font-weight: 600; font-size: 0.92rem;
+}
+.we-part { font-size: 0.85rem; color: var(--muted); margin: 0; }
+.note { font-size: 0.85rem; color: var(--muted); margin: 0; line-height: 1.45; }
+
 @media (prefers-reduced-motion: reduce) { .card { transition: none; } }
 </style>
 </head>
@@ -117,15 +161,26 @@ h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; colo
     <div class="detail" id="cDetail"></div>
   </section>
 
-  <h2>Les 10 jours suivants</h2>
-  <div class="strip" id="strip"></div>
+  <section class="panel" aria-label="Calendrier du mois">
+    <div class="mhead">
+      <button id="mPrev" aria-label="Mois précédent">‹</button>
+      <div class="title" id="mTitle"></div>
+      <button id="mNext" aria-label="Mois suivant">›</button>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
 
   <div class="legend">
     <span class="s-matin">Matin</span>
     <span class="s-am">Après-midi</span>
     <span class="s-nuit">Nuit</span>
     <span class="s-repos">Repos</span>
+    <span class="today-key">Aujourd'hui</span>
   </div>
+
+  <h2>Week-ends de repos</h2>
+  <p class="note">Samedi et dimanche tous les deux en repos, sur les 12 prochains mois.</p>
+  <div class="we-list" id="weList"></div>
 </div>
 
 <script>
@@ -133,20 +188,20 @@ h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 const REF = Date.UTC(2026, 9, 19);
 const DAY = 86400000;
 const CYCLE = [
-  { k: "matin", label: "Matin",      n: "1er matin" },
-  { k: "matin", label: "Matin",      n: "2e matin" },
-  { k: "am",    label: "Après-midi", n: "1re après-midi" },
-  { k: "am",    label: "Après-midi", n: "2e après-midi" },
-  { k: "nuit",  label: "Nuit",       n: "1re nuit" },
-  { k: "nuit",  label: "Nuit",       n: "2e nuit" },
-  { k: "repos", label: "Repos",      n: "1er jour de repos" },
-  { k: "repos", label: "Repos",      n: "2e jour de repos" },
-  { k: "repos", label: "Repos",      n: "3e jour de repos" },
-  { k: "repos", label: "Repos",      n: "4e jour de repos" },
+  { k: "matin", label: "Matin",      t: "MAT",  n: "1er matin" },
+  { k: "matin", label: "Matin",      t: "MAT",  n: "2e matin" },
+  { k: "am",    label: "Après-midi", t: "APM",  n: "1re après-midi" },
+  { k: "am",    label: "Après-midi", t: "APM",  n: "2e après-midi" },
+  { k: "nuit",  label: "Nuit",       t: "NUIT", n: "1re nuit" },
+  { k: "nuit",  label: "Nuit",       t: "NUIT", n: "2e nuit" },
+  { k: "repos", label: "Repos",      t: "REP",  n: "1er jour de repos" },
+  { k: "repos", label: "Repos",      t: "REP",  n: "2e jour de repos" },
+  { k: "repos", label: "Repos",      t: "REP",  n: "3e jour de repos" },
+  { k: "repos", label: "Repos",      t: "REP",  n: "4e jour de repos" },
 ];
 const JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
-const JOURS_COURTS = ["dim", "lun", "mar", "mer", "jeu", "ven", "sam"];
 const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+const MOIS_COURTS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 
 function shiftFor(utc) {
   const d = Math.round((utc - REF) / DAY);
@@ -169,6 +224,7 @@ function fmtLong(utc) {
 
 const $ = (id) => document.getElementById(id);
 let current = todayUTC();
+let viewY, viewM; // mois affiché dans le calendrier
 
 function nextChange(utc) {
   const s = shiftFor(utc);
@@ -180,7 +236,15 @@ function nextChange(utc) {
   return "";
 }
 
-function render() {
+function select(utc) {
+  current = utc;
+  const d = new Date(utc);
+  viewY = d.getUTCFullYear();
+  viewM = d.getUTCMonth();
+  render();
+}
+
+function renderCard() {
   const s = shiftFor(current);
   $("date").value = toISO(current);
   $("card").className = "card s-" + s.k;
@@ -189,34 +253,130 @@ function render() {
   $("cShift").textContent = s.label;
   $("cDetail").textContent = s.n + " · " + nextChange(current);
   $("today").hidden = isToday;
+}
 
-  const strip = $("strip");
-  strip.innerHTML = "";
-  for (let i = 1; i <= 10; i++) {
-    const u = current + i * DAY;
-    const t = shiftFor(u);
-    const d = new Date(u);
+function renderMonth() {
+  $("mTitle").textContent = MOIS[viewM] + " " + viewY;
+  const grid = $("grid");
+  grid.innerHTML = "";
+  ["L", "M", "M", "J", "V", "S", "D"].forEach((w) => {
+    const el = document.createElement("div");
+    el.className = "wd";
+    el.textContent = w;
+    grid.appendChild(el);
+  });
+  const first = Date.UTC(viewY, viewM, 1);
+  const offset = (new Date(first).getUTCDay() + 6) % 7; // lundi = 0
+  const days = new Date(Date.UTC(viewY, viewM + 1, 0)).getUTCDate();
+  const today = todayUTC();
+  for (let i = 0; i < offset; i++) {
+    const el = document.createElement("div");
+    el.className = "cell empty";
+    grid.appendChild(el);
+  }
+  for (let d = 1; d <= days; d++) {
+    const u = Date.UTC(viewY, viewM, d);
+    const s = shiftFor(u);
     const b = document.createElement("button");
-    b.className = "day s-" + t.k;
-    b.innerHTML = '<span class="dw"></span><span class="dn"></span><span class="ds"></span>';
-    b.children[0].textContent = JOURS_COURTS[d.getUTCDay()];
-    b.children[1].textContent = d.getUTCDate();
-    b.children[2].textContent = t.k === "am" ? "Aprem" : t.label;
-    b.setAttribute("aria-label", fmtLong(u) + " : " + t.label);
-    b.addEventListener("click", () => { current = u; render(); window.scrollTo({ top: 0, behavior: "smooth" }); });
-    strip.appendChild(b);
+    b.className = "cell s-" + s.k + (u === today ? " today" : "") + (u === current ? " sel" : "");
+    b.innerHTML = '<span class="n"></span><span class="t"></span>';
+    b.children[0].textContent = d;
+    b.children[1].textContent = s.t;
+    b.setAttribute("aria-label", fmtLong(u) + " : " + s.label);
+    b.addEventListener("click", () => { select(u); window.scrollTo({ top: 0, behavior: "smooth" }); });
+    grid.appendChild(b);
   }
 }
 
-$("date").addEventListener("change", (e) => { if (e.target.value) { current = fromISO(e.target.value); render(); } });
-$("prev").addEventListener("click", () => { current -= DAY; render(); });
-$("next").addEventListener("click", () => { current += DAY; render(); });
-$("today").addEventListener("click", () => { current = todayUTC(); render(); });
-// Revient sur aujourd'hui quand on rouvre l'appli un autre jour
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") { current = todayUTC(); render(); }
+function renderWeekends() {
+  const list = $("weList");
+  list.innerHTML = "";
+  const t = new Date(todayUTC());
+  const y0 = t.getUTCFullYear(), m0 = t.getUTCMonth();
+  for (let k = 0; k < 12; k++) {
+    const y = y0 + Math.floor((m0 + k) / 12);
+    const m = (m0 + k) % 12;
+    const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    const full = [];
+    let partial = 0;
+    for (let d = 1; d <= days; d++) {
+      const sat = Date.UTC(y, m, d);
+      if (new Date(sat).getUTCDay() !== 6) continue;
+      const sun = sat + DAY;
+      const a = shiftFor(sat).k === "repos";
+      const b = shiftFor(sun).k === "repos";
+      if (a && b) full.push(sat);
+      else if (a || b) partial++;
+    }
+
+    const box = document.createElement("div");
+    box.className = "we-month";
+    const top = document.createElement("div");
+    top.className = "we-top";
+    const name = document.createElement("span");
+    name.className = "we-name";
+    name.textContent = MOIS[m] + " " + y;
+    const count = document.createElement("span");
+    count.className = "we-count" + (full.length ? "" : " zero");
+    count.textContent = full.length === 0 ? "Aucun" : full.length + " week-end" + (full.length > 1 ? "s" : "");
+    top.append(name, count);
+    box.appendChild(top);
+
+    if (full.length) {
+      const chips = document.createElement("div");
+      chips.className = "chips";
+      full.forEach((sat) => {
+        const sun = sat + DAY;
+        const ds = new Date(sat), dd = new Date(sun);
+        const c = document.createElement("button");
+        c.className = "chip";
+        c.textContent = ds.getUTCMonth() === dd.getUTCMonth()
+          ? "Sam " + ds.getUTCDate() + " – dim " + dd.getUTCDate()
+          : "Sam " + ds.getUTCDate() + " " + MOIS_COURTS[ds.getUTCMonth()] + " – dim " + dd.getUTCDate() + " " + MOIS_COURTS[dd.getUTCMonth()];
+        c.setAttribute("aria-label", "Week-end du " + fmtLong(sat));
+        c.addEventListener("click", () => { select(sat); window.scrollTo({ top: 0, behavior: "smooth" }); });
+        chips.appendChild(c);
+      });
+      box.appendChild(chips);
+    }
+    if (partial) {
+      const p = document.createElement("p");
+      p.className = "we-part";
+      p.textContent = "+ " + partial + " week-end" + (partial > 1 ? "s" : "") + " avec un seul jour de repos";
+      box.appendChild(p);
+    }
+    list.appendChild(box);
+  }
+}
+
+function render() {
+  renderCard();
+  renderMonth();
+}
+
+$("date").addEventListener("change", (e) => { if (e.target.value) select(fromISO(e.target.value)); });
+$("prev").addEventListener("click", () => select(current - DAY));
+$("next").addEventListener("click", () => select(current + DAY));
+$("today").addEventListener("click", () => select(todayUTC()));
+$("mPrev").addEventListener("click", () => {
+  viewM--; if (viewM < 0) { viewM = 11; viewY--; }
+  renderMonth();
 });
-render();
+$("mNext").addEventListener("click", () => {
+  viewM++; if (viewM > 11) { viewM = 0; viewY++; }
+  renderMonth();
+});
+// Revient sur aujourd'hui quand on rouvre l'appli un autre jour
+let lastDay = todayUTC();
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && todayUTC() !== lastDay) {
+    lastDay = todayUTC();
+    select(lastDay);
+    renderWeekends();
+  }
+});
+select(current);
+renderWeekends();
 
 // Mise en cache pour fonctionner sans réseau
 if ("serviceWorker" in navigator) {

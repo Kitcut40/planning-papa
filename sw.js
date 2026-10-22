@@ -1,6 +1,6 @@
 // Service worker : garde l'appli en cache pour qu'elle marche sans réseau.
 // Change le numéro de version si tu modifies un fichier, pour forcer la mise à jour.
-const CACHE = "planning-papa-v2";
+const CACHE = "planning-papa-v3";
 const FILES = [
   "./",
   "index.html",
